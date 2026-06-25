@@ -142,6 +142,7 @@ External APIs
 Copy-Item .env.example .env
 ```
 
+<<<<<<< HEAD
 필수 설정:
 
 ```properties
@@ -167,6 +168,11 @@ GMS_MODEL=gpt-4o-mini
 ---
 
 ## 🗄️ DB 준비
+=======
+`.env`는 `.gitignore`에 포함되어 있으므로 GitHub에 올라가지 않습니다. 실제 DB 계정, 비밀번호, API 키는 `.env`에만 작성하세요.
+
+즉, MySQL URL, username, password는 코드에 고정하지 않고 `.env` 또는 실행 환경 변수에서만 가져옵니다.
+>>>>>>> 43c43326f500d02e45e270e2d0d0b42810b6b87a
 
 MySQL에서 데이터베이스와 사용자를 생성합니다.
 
