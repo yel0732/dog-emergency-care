@@ -1,0 +1,822 @@
+/* Care records and pet registration base layout. */
+/* pet registration and base care-record calendar styles */
+/* =========================================================
+   반려견 관리 — 새 레이아웃
+   ========================================================= */
+.pet-section-wrap {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.pet-form-card {
+  border: none;
+  border-radius: var(--r-lg);
+  background: var(--bg-card);
+  box-shadow: var(--sh-card);
+  overflow: hidden;
+  position: sticky;
+  top: 84px;
+}
+
+.pet-form-body {
+  padding: 22px 24px;
+  display: grid;
+  gap: 15px;
+}
+.pet-form-body label,
+.pet-form-row label { font-size: 14px; align-self: end; }
+.pet-form-body input,
+.pet-form-body select,
+.pet-form-body textarea,
+.pet-form-body .csel-trigger { font-size: 14.5px; }
+
+.pet-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+}
+
+.mini-calendar {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(12,110,114,0.12);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fff 0%, #f7fbfb 100%);
+  box-shadow: 0 10px 24px rgba(15,23,42,0.05);
+}
+
+.mini-calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mini-calendar-head strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.mini-calendar-head button {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--green);
+  box-shadow: none;
+}
+
+.mini-calendar-week,
+.mini-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.mini-calendar-week span {
+  color: var(--ink-300);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.mini-calendar-grid button {
+  min-width: 0;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-700);
+  font-size: 12px;
+  font-weight: 850;
+  box-shadow: none;
+}
+
+.mini-calendar-grid button:not(:disabled):hover {
+  border-color: rgba(12,110,114,0.18);
+  background: #eef9f8;
+  color: var(--green);
+  transform: none;
+}
+
+.mini-calendar-grid button.today {
+  border-color: rgba(12,110,114,0.22);
+  background: #fff;
+  color: var(--green);
+}
+
+.mini-calendar-grid button.selected {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(12,110,114,0.18);
+}
+
+.mini-calendar-grid button:disabled {
+  cursor: default;
+  visibility: hidden;
+}
+
+.mini-calendar p {
+  margin: 0;
+  padding-top: 2px;
+  color: var(--green-600);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.record-calendar-panel {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  padding: 0 24px 24px;
+  align-items: stretch;
+}
+
+.record-calendar {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  border: 1px solid rgba(12,110,114,0.12);
+  border-radius: 24px;
+  width: min(780px, 100%);
+  min-height: 500px;
+  margin: 0 auto;
+  padding: 78px 34px 34px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(247,251,251,0.98) 100%);
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.07);
+}
+
+.record-calendar .mini-calendar-head strong {
+  font-size: 20px;
+}
+
+.record-calendar .mini-calendar-head button {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  border-radius: 12px;
+}
+
+.record-calendar .mini-calendar-week span {
+  font-size: 13px;
+}
+
+.record-calendar-grid button {
+  position: relative;
+  display: grid;
+  align-content: start;
+  justify-items: stretch;
+  gap: 7px;
+  min-height: 84px;
+  padding: 10px 8px 8px;
+  font-size: 16px;
+}
+
+.record-calendar-grid .calendar-day-number {
+  position: relative;
+  z-index: 1;
+  justify-self: center;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.calendar-event-list {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.calendar-event-chip {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  height: 19px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 850;
+  line-height: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.calendar-event-chip.tone-hospital {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.calendar-event-chip.tone-emergency {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.calendar-event-chip.tone-medicine {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.calendar-event-chip.tone-vaccine {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.calendar-event-chip.tone-checkup {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.calendar-event-chip.tone-routine {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.calendar-event-chip.tone-observe {
+  background: #cffafe;
+  color: #0e7490;
+}
+
+.calendar-event-chip.tone-default {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.calendar-event-chip.tone-more {
+  background: rgba(15, 23, 42, 0.08);
+  color: var(--ink-500);
+  text-align: center;
+}
+
+.record-calendar-grid button.hasRecord:not(.selected) {
+  border-color: rgba(12,110,114,0.22);
+  background: #ffffff;
+}
+
+.record-calendar-grid button.selected {
+  align-content: start;
+  border-color: rgba(12,110,114,0.22);
+  background: #ffffff;
+  color: var(--ink-700);
+  box-shadow: none;
+}
+
+.record-calendar-grid button.selected .calendar-day-number {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(12,110,114,0.18);
+}
+
+.record-calendar-grid button.selected .calendar-event-chip {
+  box-shadow: none;
+}
+
+.record-calendar,
+.record-calendar * {
+  cursor: default !important;
+}
+
+.record-calendar .mini-calendar-head button:not(:disabled),
+.record-calendar-grid button:not(:disabled) {
+  cursor: var(--paw-cursor) !important;
+}
+
+.record-calendar-grid button:not(:disabled):hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.care-record-layout {
+  grid-template-columns: minmax(340px, 0.38fr) minmax(0, 1.62fr);
+  align-items: stretch;
+}
+
+.record-form-card {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  min-height: 520px;
+  position: static;
+}
+
+.record-form-card .pet-form-body {
+  flex: 1;
+  align-content: start;
+}
+
+.record-form-card .pet-form-actions {
+  margin-top: auto;
+}
+
+.record-board-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 520px;
+}
+
+.record-board-section .pet-list-head {
+  position: absolute;
+  top: 22px;
+  left: calc(50% - min(390px, 50%));
+  z-index: 2;
+  min-height: 0;
+  align-items: flex-start;
+  border-bottom: 0;
+  min-width: 0;
+  padding: 0 34px;
+}
+
+.record-board-section .pet-list-head h2 {
+  margin-top: 2px;
+  font-size: 17px;
+}
+
+.record-board-section .pet-list-head > div {
+  min-width: 0;
+}
+
+.record-board-section .pet-list-head > button {
+  flex: 0 0 auto;
+  min-width: 86px;
+  padding-inline: 18px;
+  white-space: nowrap;
+}
+
+.selected-record-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.selected-record-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(12,110,114,0.1);
+  border-radius: 18px;
+  padding: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfb 100%);
+  box-shadow: 0 12px 28px rgba(15,23,42,0.06);
+}
+
+.selected-record-card.done {
+  opacity: 0.72;
+  background: #f6faf9;
+}
+
+.selected-record-card h3 {
+  margin: 8px 0 4px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.selected-record-card p {
+  margin: 0;
+  color: var(--ink-500);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.record-empty-card {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 148px;
+  border: 1px dashed rgba(12,110,114,0.2);
+  border-radius: 18px;
+  padding: 20px;
+  color: var(--ink-500);
+  background: #f8fbfb;
+  text-align: center;
+}
+
+.record-empty-card strong {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.record-empty-card span {
+  max-width: 330px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pet-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.pet-form-actions .check-line { margin-right: auto; }
+
+.req {
+  color: var(--red);
+  font-size: 13px;
+  margin-left: 2px;
+}
+
+/* 반려견 목록 */
+.pet-list-section {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.pet-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pet-list-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pet-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pet-card-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.pet-profile-card {
+  display: grid;
+  grid-template-columns: 48px minmax(140px, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+  padding: 16px 18px;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--bg-card);
+  box-shadow: var(--sh-card);
+  transition: box-shadow 0.2s ease, transform 0.2s cubic-bezier(.22,.68,0,1.2);
+}
+
+.pet-profile-card:hover {
+  box-shadow: var(--sh-2);
+  transform: translateY(-2px);
+}
+
+.pet-avatar {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(12,110,114,0.14) 0%, rgba(10,138,144,0.08) 100%);
+  color: var(--green);
+  font-size: 20px;
+  font-weight: 900;
+  flex-shrink: 0;
+  border: 1px solid rgba(12,110,114,0.12);
+}
+
+.pet-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pet-info strong {
+  display: block;
+  max-width: 100%;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pet-breed {
+  display: block;
+  max-width: 100%;
+  font-size: 14px;
+  color: var(--ink-500);
+  font-weight: 600;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pet-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.pet-stats span {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-700);
+}
+
+.pet-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: rgba(192,122,18,0.06);
+  border: 1px solid rgba(192,122,18,0.15);
+  border-radius: 8px;
+}
+
+.pet-notes span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.pet-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pet-card-actions button {
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 12.5px;
+  border-radius: 9px;
+}
+
+.pet-management-page {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.pet-management-page .pet-entry-panel,
+.pet-management-page .pet-list-panel {
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+}
+
+.pet-management-page .pet-entry-panel {
+  position: static;
+}
+
+.pet-management-page .pet-entry-panel .panel-head {
+  padding: 22px 26px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.pet-management-page .pet-entry-panel .panel-head button {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+.pet-management-page .pet-entry-panel .pet-form-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  padding: 20px 26px 24px;
+}
+
+.pet-management-page .pet-entry-panel .pet-form-row {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  grid-column: 1 / -1 !important;
+}
+
+.pet-management-page .pet-entry-panel .wide,
+.pet-management-page .pet-entry-panel .pet-form-actions {
+  grid-column: 1 / -1 !important;
+}
+
+.pet-management-page .pet-entry-panel .pet-form-body > label {
+  grid-column: 1 / -1 !important;
+}
+
+.pet-management-page .pet-entry-panel label,
+.pet-management-page .pet-entry-panel .wide {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pet-management-page .pet-entry-panel .lbl {
+  color: var(--ink-700);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.pet-management-page .pet-entry-panel input {
+  min-height: 44px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.pet-management-page .segmented-choice-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+}
+
+.pet-management-page .segmented-choice {
+  min-height: 38px;
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+.pet-management-page .pet-form-actions {
+  padding-top: 12px;
+}
+
+.pet-management-page .pet-form-actions .primary {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 11px;
+}
+
+.pet-management-page .pet-list-panel {
+  padding: 20px;
+}
+
+.pet-management-page .pet-list-head {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.pet-management-page .pet-list-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pet-management-page .pet-list-tools input {
+  width: min(280px, 36vw);
+  min-height: 38px;
+  border-radius: 10px;
+}
+
+.pet-management-page .pet-list-tools button {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+.pet-management-page .pet-card-grid {
+  grid-template-columns: 1fr !important;
+  gap: 12px;
+}
+
+.pet-management-page .pet-profile-card {
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.pet-management-page .pet-profile-card:hover {
+  transform: none;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.pet-management-page .pet-info {
+  gap: 5px;
+}
+
+.pet-management-page .pet-stats {
+  gap: 7px;
+}
+
+.pet-management-page .pet-stats span + span::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 7px 2px 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.pet-management-page .pet-notes {
+  margin-top: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+}
+
+.pet-management-page .pet-card-actions {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pet-management-page .pet-card-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .pet-section-wrap {
+    grid-template-columns: 1fr;
+  }
+  .pet-form-card { position: static; }
+  .pet-form-row { grid-template-columns: 1fr; }
+  .pet-management-page {
+    grid-template-columns: 1fr;
+  }
+  .pet-management-page .pet-entry-panel {
+    position: static;
+  }
+  .pet-management-page .pet-entry-panel .pet-form-body {
+    grid-template-columns: 1fr !important;
+  }
+  .pet-management-page .segmented-choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pet-management-page .pet-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .pet-management-page .pet-list-head,
+  .pet-management-page .pet-list-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .pet-management-page .pet-list-tools input {
+    width: 100%;
+  }
+  .pet-profile-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+  .pet-card-actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+.form-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.form-actions, .row-actions, .card-actions, .result-actions, .demo-login-row { align-items: center; }
+.row-actions { display: flex; gap: 6px; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.filters input, .filters select { width: 170px; }

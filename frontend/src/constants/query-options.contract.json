@@ -1,0 +1,24 @@
+{
+  "defaults": {
+    "sort": "latest",
+    "direction": "desc"
+  },
+  "directions": [
+    { "value": "desc", "label": "내림차순" },
+    { "value": "asc", "label": "오름차순" }
+  ],
+  "videoSorts": [
+    { "value": "latest", "label": "최신순" },
+    { "value": "bookmarks", "label": "찜 많은순" },
+    { "value": "title", "label": "제목순" },
+    { "value": "category", "label": "카테고리순" }
+  ],
+  "caseSorts": [
+    { "value": "latest", "label": "최신순" },
+    { "value": "title", "label": "제목순" },
+    { "value": "category", "label": "카테고리순" },
+    { "value": "views", "label": "조회순" },
+    { "value": "comments", "label": "댓글순" },
+    { "value": "followers", "label": "팔로워순" }
+  ]
+}

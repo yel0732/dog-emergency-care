@@ -1,0 +1,11 @@
+@import "./styles/base.css";
+@import "./styles/components.css";
+@import "./styles/pages/records.css";
+@import "./styles/pages/dashboard.css";
+@import "./styles/pages/emergency.css";
+@import "./styles/pages/hospitals.css";
+@import "./styles/pages/food.css";
+@import "./styles/pages/videos.css";
+@import "./styles/pages/users.css";
+@import "./styles/overrides.css";
+@import "./styles/pages/login.css";
