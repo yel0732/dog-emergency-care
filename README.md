@@ -72,42 +72,6 @@ Copy-Item .env.example .env
 
 `.env`는 `.gitignore`에 포함되어 있으므로 GitHub에 올라가지 않습니다. 실제 DB 계정, 비밀번호, API 키는 `.env`에만 작성하세요.
 
-필수 MySQL 설정:
-
-```properties
-DB_URL=jdbc:mysql://localhost:3306/rescue_mungz?createDatabaseIfNotExist=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-DB_USERNAME=your_mysql_username
-DB_PASSWORD=your_mysql_password
-```
-
-주요 선택 설정:
-
-```properties
-JWT_SECRET=put-your-long-random-jwt-secret-here
-JWT_EXPIRATION_SECONDS=7200
-
-KAKAO_REST_API_KEY=put-your-kakao-rest-api-key-here
-VITE_KAKAO_JS_KEY=put-your-kakao-javascript-key-here
-GOOGLE_PLACES_API_KEY=put-your-google-places-api-key-here
-
-GMS_API_KEY=put-your-gms-api-key-here
-GMS_BASE_URL=https://gms.ssafy.io/gmsapi
-GMS_CHAT_COMPLETIONS_PATH=/api.openai.com/v1/chat/completions
-GMS_MODEL=gpt-4o-mini
-GMS_TIMEOUT_SECONDS=8
-GMS_TEMPERATURE=0.2
-GMS_RETRY_MAX_ATTEMPTS=1
-```
-
-Spring Boot는 `src/main/resources/application.properties`에서 다음처럼 `.env` 값을 읽습니다.
-
-```properties
-spring.config.import=optional:file:.env[.properties]
-spring.datasource.url=${DB_URL}
-spring.datasource.username=${DB_USERNAME}
-spring.datasource.password=${DB_PASSWORD}
-```
-
 즉, MySQL URL, username, password는 코드에 고정하지 않고 `.env` 또는 실행 환경 변수에서만 가져옵니다.
 
 ## DB 준비
