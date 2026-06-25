@@ -188,7 +188,7 @@ function riskSummaryRows(value = "") {
   }
   return rows
     .filter((item) => item.value)
-    .filter((item) => item.label !== "요약" || !/^참고\s*근거\s*요지/.test(item.value));
+    .filter((item) => item.label !== "요약");
 }
 
 function evidenceItems(value = "") {

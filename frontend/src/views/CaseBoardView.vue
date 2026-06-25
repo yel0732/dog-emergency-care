@@ -832,7 +832,7 @@ watch(
       </section>
     </div>
 
-    <div v-if="selected" class="case-modal-backdrop" @click.self="closeDetail">
+    <div v-if="selected && !isPostModalOpen" class="case-modal-backdrop" @click.self="closeDetail">
       <section class="case-modal case-detail-modal" role="dialog" aria-modal="true">
         <header class="case-modal-head">
           <div>

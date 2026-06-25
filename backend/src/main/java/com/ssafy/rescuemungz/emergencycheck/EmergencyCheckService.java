@@ -67,6 +67,7 @@ public class EmergencyCheckService {
         if (!"정보부족".equals(riskLevel)) {
             guide = normalizeVetQuestions(riskLevel, request, structured, food, matches, guide);
         }
+        guide = ensureActionGuidance(riskLevel, food, matches, actions, guide);
         if ("정보부족".equals(riskLevel)) {
             return transientCheck(userId, request, food, structured, riskLevel, guide, actions);
         }
@@ -140,6 +141,7 @@ public class EmergencyCheckService {
         if (report == null) {
             throw new NotFoundException("Vet report not found.");
         }
+        report.setRiskSummary(normalizeReportRiskSummary(check, report.getRiskSummary()));
         return normalizeVetReportQuestions(report, check.getRiskLevel());
     }
 
@@ -303,6 +305,33 @@ public class EmergencyCheckService {
                 guide.availableActions(),
                 guide.fallbackUsed()
         );
+    }
+
+    private EmergencyGuideResponse ensureActionGuidance(String riskLevel, FoodSafety food, List<MatchedEmergencyRule> matches,
+                                                        AvailableActions actions, EmergencyGuideResponse guide) {
+        EmergencyGuideResponse fallback = guideFactory.fallback(riskLevel, riskResolver.reason(riskLevel, food, matches), food, matches, actions, true);
+        List<String> immediateActions = isBlankList(guide.immediateActions()) ? fallback.immediateActions() : guide.immediateActions();
+        List<String> avoidActions = isBlankList(guide.avoidActions()) ? fallback.avoidActions() : guide.avoidActions();
+        if (immediateActions == guide.immediateActions() && avoidActions == guide.avoidActions()) {
+            return guide;
+        }
+        return new EmergencyGuideResponse(
+                guide.emergencyLevel(),
+                guide.headline(),
+                immediateActions,
+                avoidActions,
+                guide.observationChecklist(),
+                guide.escalationCriteria(),
+                guide.optionalQuestions(),
+                guide.evidenceSummary(),
+                guide.disclaimer(),
+                guide.availableActions(),
+                guide.fallbackUsed()
+        );
+    }
+
+    private boolean isBlankList(List<String> values) {
+        return values == null || values.stream().allMatch(value -> value == null || value.isBlank());
     }
 
     private VetReport normalizeVetReportQuestions(VetReport report, String riskLevel) {
@@ -524,7 +553,8 @@ public class EmergencyCheckService {
         List<String> observed = structured == null || structured.observedSigns() == null ? List.of() : structured.observedSigns();
         List<String> keywords = structured == null || structured.symptomKeywords() == null ? List.of() : structured.symptomKeywords();
         StringBuilder summary = new StringBuilder();
-        summary.append("보호자 입력 증상: ").append(TextSafety.clean(request.symptomNote(), 600)).append("\n");
+        summary.append("보호자 입력 증상: ").append(singleLine(request.symptomNote(), 600)).append("\n");
+        summary.append("요약: ").append(riskBriefSummary(check, guide, matches, food)).append("\n");
         if (request.occurredTimeText() != null && !request.occurredTimeText().isBlank()) {
             summary.append("발생 시점: ").append(TextSafety.clean(request.occurredTimeText(), 80)).append("\n");
         }
@@ -708,10 +738,11 @@ public class EmergencyCheckService {
                 || current.isBlank()
                 || current.contains("반려견 응급 상황 안내")
                 || current.contains("참고 근거는 아래 근거 내용");
-        if (!notUseful) return sanitizeRiskSummary(current);
+        if (!notUseful) return normalizeReportRiskSummary(check, current);
         List<String> tags = readStringList(check.getSymptomTags());
         StringBuilder summary = new StringBuilder();
-        summary.append("보호자 입력 증상: ").append(TextSafety.clean(check.getSymptomNote(), 600)).append("\n");
+        summary.append("보호자 입력 증상: ").append(singleLine(check.getSymptomNote(), 600)).append("\n");
+        summary.append("요약: ").append(fallbackRiskBriefSummary(check)).append("\n");
         summary.append("응급도 분류: ").append(check.getRiskLevel()).append("\n");
         summary.append("권장 방향: ").append(check.getImmediateVet() ? "즉시 병원 방문이 권장됩니다." : "상태 변화를 관찰하고 악화되면 병원 문의가 권장됩니다.").append("\n");
         if (!tags.isEmpty()) summary.append("선택 태그: ").append(String.join(", ", tags)).append("\n");
@@ -747,6 +778,78 @@ public class EmergencyCheckService {
                 .replaceAll("[ \\t]+\\n", "\n")
                 .replaceAll("\\n{3,}", "\n\n")
                 .trim();
+    }
+
+    private String normalizeReportRiskSummary(EmergencyCheck check, String value) {
+        String sanitized = sanitizeRiskSummary(value);
+        if (sanitized == null || sanitized.isBlank()) return sanitized;
+        List<String> output = new ArrayList<>();
+        boolean hasBriefSummary = false;
+        int lastLabelIndex = -1;
+        for (String rawLine : sanitized.split("\\R")) {
+            String line = rawLine == null ? "" : rawLine.trim();
+            if (line.isBlank()) continue;
+            int separator = line.indexOf(':');
+            boolean hasLabel = separator > 0 && separator <= 18;
+            if (hasLabel) {
+                String label = line.substring(0, separator).trim();
+                if ("요약".equals(label)) hasBriefSummary = true;
+                output.add(line);
+                lastLabelIndex = output.size() - 1;
+            } else if (lastLabelIndex >= 0 && output.get(lastLabelIndex).startsWith("보호자 입력 증상:")) {
+                output.set(lastLabelIndex, output.get(lastLabelIndex) + " " + line);
+            } else {
+                output.add("요약: " + line);
+                hasBriefSummary = true;
+                lastLabelIndex = output.size() - 1;
+            }
+        }
+        if (!hasBriefSummary) {
+            int insertIndex = output.isEmpty() ? 0 : 1;
+            output.add(Math.min(insertIndex, output.size()), "요약: " + fallbackRiskBriefSummary(check));
+        }
+        return TextSafety.clean(String.join("\n", output), 1200);
+    }
+
+    private String riskBriefSummary(EmergencyCheck check, EmergencyGuideResponse guide, List<MatchedEmergencyRule> matches, FoodSafety food) {
+        String evidencePoint = firstNonBlank(evidencePoints(guide.evidenceSummary(), 1));
+        if (evidencePoint != null) {
+            return riskBriefSentence(check.getRiskLevel(), evidencePoint);
+        }
+        if (food != null) {
+            String reason = firstNonBlankText(food.getDangerReason(), "해당 음식/물질의 안전 정보 확인이 필요합니다.");
+            return TextSafety.clean("%s 관련 %s 단계로 판단되어 %s".formatted(food.getFoodName(), check.getRiskLevel(), trimPeriod(reason)), 260);
+        }
+        String matchReason = riskResolver.reason(check.getRiskLevel(), food, matches);
+        if (matchReason != null && !matchReason.isBlank()) {
+            return riskBriefSentence(check.getRiskLevel(), matchReason);
+        }
+        return fallbackRiskBriefSummary(check);
+    }
+
+    private String fallbackRiskBriefSummary(EmergencyCheck check) {
+        String reason = firstNonBlankText(check.getRiskReason(), check.getRecommendedAction());
+        if (reason == null || reason.isBlank()) {
+            reason = check.getImmediateVet()
+                    ? "현재 입력에는 즉시 병원 상담이나 방문이 필요한 위험 신호가 포함될 수 있습니다."
+                    : "현재 입력 기준으로 상태 변화를 관찰하고 악화 시 병원 문의가 필요합니다.";
+        }
+        return riskBriefSentence(check.getRiskLevel(), reason);
+    }
+
+    private String riskBriefSentence(String riskLevel, String reason) {
+        String cleaned = trimPeriod(TextSafety.clean(reason, 260))
+                .replace("참고 근거는 아래 근거 내용에서 확인할 수 있습니다", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+        if (cleaned.startsWith(riskLevel + " 단계")) {
+            return TextSafety.clean(cleaned, 260);
+        }
+        return TextSafety.clean("%s 단계로, %s".formatted(riskLevel, cleaned), 260);
+    }
+
+    private String singleLine(String value, int maxLength) {
+        return TextSafety.clean(value, maxLength).replaceAll("\\R+", " ");
     }
 
     private String petSnapshot(Pet pet) {

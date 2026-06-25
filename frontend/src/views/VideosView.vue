@@ -333,6 +333,11 @@ async function load(page = 0, options = {}) {
         filter.keyword = keywordFallback;
       }
     }
+    if ((response.items || []).length === 0 && filter.category && !filter.bookmarkedOnly) {
+      filter.category = "";
+      filter.keyword = "";
+      response = await videoPageRequest(0);
+    }
     if ((response.items || []).length === 0 && requestedPage > 0 && response.totalPages > 0) {
       response = await videoPageRequest(response.totalPages - 1);
     }

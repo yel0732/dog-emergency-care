@@ -156,6 +156,9 @@ const careRecordRoute = computed(() => {
 async function load() {
   try {
     pets.value = await petApi.list();
+    if (form.petId && form.currentWeight === "" && selectedPet.value?.weight != null) {
+      form.currentWeight = selectedPet.value.weight;
+    }
   } catch (e) {
     pets.value = [];
     error.value = "반려견 목록을 불러오지 못했어요. 응급 체크를 진행하려면 등록된 반려견을 선택해야 합니다.";
@@ -446,7 +449,11 @@ onBeforeUnmount(() => {
 });
 
 watch(() => form.petId, () => {
-  form.currentWeight = selectedPet.value?.weight ?? "";
+  if (selectedPet.value?.weight != null) {
+    form.currentWeight = selectedPet.value.weight;
+  } else if (!form.petId) {
+    form.currentWeight = "";
+  }
 });
 
 watch(activeResultTab, updateResultPanelHeight);

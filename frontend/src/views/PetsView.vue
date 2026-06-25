@@ -728,7 +728,6 @@ onMounted(async () => {
           </div>
           <label><span class="lbl">메모</span><textarea v-model="planForm.memo" rows="4" maxlength="500" placeholder="준비물이나 병원 전달 내용을 적어주세요" /></label>
           <div class="pet-form-actions">
-            <label v-if="editingPlanId" class="check-line"><input v-model="planForm.completed" type="checkbox" /> 완료됨</label>
             <button class="primary" type="submit">{{ editingPlanId ? "수정 저장" : "기록 저장" }}</button>
           </div>
         </div>

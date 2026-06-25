@@ -205,7 +205,10 @@ function responseSectionLabel(food) {
 }
 
 function conditionSectionLabel(food) {
-  return riskTone(food) === "ok" ? "안전 조건" : "위험 조건";
+  const tone = riskTone(food);
+  if (tone === "ok") return "안전 조건";
+  if (tone === "caution") return "주의 조건";
+  return "위험 조건";
 }
 
 function summaryFields(food) {
