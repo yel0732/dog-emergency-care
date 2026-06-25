@@ -189,7 +189,7 @@ CREATE TABLE `care_diaries` (
   `pet_id` BIGINT NOT NULL,
   `emergency_check_id` BIGINT NULL,
   `visit_date` DATE NOT NULL,
-  `category` ENUM('응급 체크','진료','접종','약 복용','검진','케어 루틴') NOT NULL,
+  `category` ENUM('응급 체크','병원 진료','진료','예방접종','접종','약 복용','검진','케어 루틴') NOT NULL,
   `title` VARCHAR(200) NOT NULL,
   `hospital` VARCHAR(200) NULL,
   `memo` TEXT NULL,

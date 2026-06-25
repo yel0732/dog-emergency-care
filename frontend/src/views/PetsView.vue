@@ -366,7 +366,9 @@ function resetPlan() {
 }
 
 function planCategoryLabel(category) {
-  return category === "병원 방문" ? "병원 진료" : category;
+  if (category === "병원 방문") return "병원 진료";
+  if (category === "접종") return "예방접종";
+  return category;
 }
 
 function applyPlanDraftFromRoute() {
