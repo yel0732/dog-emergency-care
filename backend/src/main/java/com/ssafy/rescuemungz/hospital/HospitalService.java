@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 public class HospitalService {
     private static final Set<String> ALLOWED_STATUSES = Set.of("open", "normal", "emergency24", "night", "weekend");
     private static final int AUTO_GEOCODE_LIMIT = 5;
-    private static final int AUTO_HOURS_SYNC_LIMIT = 25;
+    private static final int AUTO_HOURS_SYNC_LIMIT = 60;
 
     private final HospitalMapper mapper;
     private final HospitalGeocodeService geocodeService;

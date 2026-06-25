@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { hospitalApi } from "../api/resources";
 import AppToast from "../components/AppToast.vue";
@@ -38,12 +38,13 @@ const loadError = ref("");
 const mapEl = ref(null);
 const hospitalListEl = ref(null);
 const currentLocation = ref(null);
+const currentTime = ref(new Date());
 const regionOptions = reactive({ sidos: [], sigungus: {}, counts: [] });
 const filter = reactive({
   keyword: "",
   lat: "",
   lng: "",
-  status: "open",
+  status: "",
   sido: "",
   sigungu: "",
   phoneOnly: false,
@@ -56,16 +57,25 @@ let currentLocationOverlay = null;
 let hospitalInfoOverlay = null;
 let toastTimer = null;
 let autoLocationRequested = false;
+let currentTimeTimer = null;
+let preserveNextViewportRender = false;
 
-const locatedHospitals = computed(() => hospitals.value.filter(hasCoordinate));
+const displayHospitals = computed(() => {
+  if (filter.status === "open") return hospitals.value.filter(isCurrentlyOpenHospital);
+  if (filter.status === "emergency24") return hospitals.value.filter(isEmergency24Hospital);
+  return hospitals.value;
+});
+const locatedHospitals = computed(() => displayHospitals.value.filter(hasCoordinate));
 const visibleLocatedCount = computed(() => locatedHospitals.value.length);
 const mapPageHospitals = computed(() => visibleMapHospitals.value);
 const listedHospitals = computed(() => {
   if (mapPageHospitals.value.length > 0) return prioritizeSelectedHospital(mapPageHospitals.value);
-  if (usesDistanceFallbackList()) return prioritizeSelectedHospital(hospitals.value);
+  if (usesDistanceFallbackList()) return prioritizeSelectedHospital(displayHospitals.value);
   return [];
 });
-const mapVisibleHospitalCount = computed(() => mapPageHospitals.value.length);
+const mapVisibleOpenCount = computed(() =>
+  (mapPageHospitals.value.length > 0 ? mapPageHospitals.value : listedHospitals.value).filter(isCurrentlyOpenHospital).length
+);
 const mapViewportCountText = computed(() => {
   if (hospitalLoading.value) return "불러오는 중";
   if (mapPageHospitals.value.length > 0) return `현재 지도 ${mapPageHospitals.value.length.toLocaleString()} 곳`;
@@ -161,7 +171,7 @@ const hospitalListTitle = computed(() => {
 });
 
 function usesDistanceFallbackList() {
-  return isCurrentLocationMode.value || filter.status === "emergency24";
+  return isCurrentLocationMode.value || filter.status === "emergency24" || filter.status === "";
 }
 
 function hasCoordinate(hospital) {
@@ -232,6 +242,92 @@ function hasExplicit24hText(hospital) {
   return /(?:24\s*시|24\s*시간|24\s*h|24\/7|open\s*24\s*hours)/i.test(source);
 }
 
+const dayNames = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"];
+const closedPattern = /(?:휴무|정기\s*휴무|closed|영업\s*종료)/i;
+const unknownHoursPattern = /(?:확인\s*필요|정보\s*없음|문의|전화\s*확인)/i;
+
+function timeToMinutes(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/(오전|오후|AM|PM)?\s*(\d{1,2})(?::(\d{2}))?/i);
+  if (!match) return null;
+  const meridiem = match[1]?.toLowerCase();
+  let hour = Number(match[2]);
+  const minute = Number(match[3] || 0);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || minute > 59) return null;
+  if (meridiem === "오전" || meridiem === "am") {
+    if (hour === 12) hour = 0;
+  } else if (meridiem === "오후" || meridiem === "pm") {
+    if (hour < 12) hour += 12;
+  }
+  if (hour > 23) return null;
+  return hour * 60 + minute;
+}
+
+function parseHourRanges(line) {
+  return String(line || "")
+    .split(/[,/]|(?:\s{2,})/)
+    .map((part) => part.trim())
+    .flatMap((part) => {
+      const [startText, endText] = part.split(/\s*(?:~|-|–|—|至)\s*/);
+      const start = timeToMinutes(startText);
+      const end = timeToMinutes(endText);
+      return start == null || end == null ? [] : [{ start, end }];
+    });
+}
+
+function openingHourLines(hospital) {
+  if (!hasSyncedHours(hospital)) return [];
+  return normalizedOpeningHours(hospital.openingHours)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function lineForDay(hospital, dayIndex) {
+  const dayName = dayNames[dayIndex];
+  return openingHourLines(hospital).find((line) => line.startsWith(`${dayName}:`) || line.startsWith(dayName));
+}
+
+function isOpenForRanges(ranges, minuteOfDay, allowOvernightOnly = false) {
+  return ranges.some(({ start, end }) => {
+    if (start === end) return true;
+    if (end > start) return !allowOvernightOnly && minuteOfDay >= start && minuteOfDay < end;
+    return allowOvernightOnly
+      ? minuteOfDay < end
+      : minuteOfDay >= start || minuteOfDay < end;
+  });
+}
+
+function currentOperatingState(hospital, now = currentTime.value) {
+  if (hasExplicit24hText(hospital)) return { status: "open", label: "영업 중" };
+  if (!hasSyncedHours(hospital)) return { status: "unknown", label: "영업 시간 확인" };
+
+  const dayIndex = now.getDay();
+  const minuteOfDay = now.getHours() * 60 + now.getMinutes();
+  const todayLine = lineForDay(hospital, dayIndex);
+  const yesterdayLine = lineForDay(hospital, (dayIndex + 6) % 7);
+  const todayHours = String(todayLine || "").replace(/^[^:：]+[:：]\s*/, "");
+  const yesterdayHours = String(yesterdayLine || "").replace(/^[^:：]+[:：]\s*/, "");
+
+  if (unknownHoursPattern.test(todayHours)) return { status: "unknown", label: "영업 시간 확인" };
+  if (closedPattern.test(todayHours)) return { status: "closed", label: "진료 종료" };
+
+  const todayRanges = parseHourRanges(todayHours);
+  const yesterdayRanges = parseHourRanges(yesterdayHours);
+  if (
+    isOpenForRanges(todayRanges, minuteOfDay)
+    || isOpenForRanges(yesterdayRanges, minuteOfDay, true)
+  ) {
+    return { status: "open", label: "영업 중" };
+  }
+  if (todayRanges.length > 0 || yesterdayRanges.length > 0) return { status: "closed", label: "진료 종료" };
+  return { status: "unknown", label: "영업 시간 확인" };
+}
+
+function isCurrentlyOpenHospital(hospital) {
+  return currentOperatingState(hospital).status === "open";
+}
+
 function isEmergency24Hospital(hospital) {
   return Boolean(hospital?.is24h || hospital?.emergencyAvailable || hasExplicit24hText(hospital));
 }
@@ -258,15 +354,15 @@ function normalizedOpeningHours(value) {
 function openingHoursPreview(hospital, maxLines = 2) {
   if (hasExplicit24hText(hospital)) return ["24시간 운영"];
   if (!hasSyncedHours(hospital)) return ["영업시간 확인 필요"];
-  return normalizedOpeningHours(hospital.openingHours)
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, maxLines);
+  return openingHourLines(hospital).slice(0, maxLines);
 }
 
 function openingHoursSummary(hospital) {
   return openingHoursPreview(hospital, 2).join("\n");
+}
+
+function operatingStatusDisplay(hospital) {
+  return currentOperatingState(hospital).label;
 }
 
 function openingHourLineClass(line) {
@@ -292,7 +388,7 @@ function resetHospitalFilters() {
   filter.keyword = "";
   filter.lat = currentLocation.value ? String(currentLocation.value.lat) : "";
   filter.lng = currentLocation.value ? String(currentLocation.value.lng) : "";
-  filter.status = "open";
+  filter.status = "";
   filter.sido = "";
   filter.sigungu = "";
   filter.phoneOnly = false;
@@ -307,7 +403,7 @@ function hasExplicitSearchCondition() {
     || filter.sigungu
     || filter.phoneOnly
     || filter.locatedOnly
-    || filter.status !== "open"
+    || filter.status
   );
 }
 
@@ -452,7 +548,7 @@ function showEmptyMapGuide() {
     return;
   }
 
-  if (filter.sido || filter.sigungu || filter.status !== "open" || filter.phoneOnly || filter.locatedOnly) {
+  if (filter.sido || filter.sigungu || filter.status || filter.phoneOnly || filter.locatedOnly) {
     mapMessage.value = "선택한 조건에 맞는 병원이 없습니다.\n조건을 줄이거나 다른 지역을 선택해 주세요.";
     return;
   }
@@ -563,7 +659,7 @@ function focusSelectedHospitalOnMap() {
   }
 }
 
-function renderMarkers() {
+function renderMarkers({ preserveViewport = false } = {}) {
   if (!kakaoMap || !window.kakao?.maps) return;
   clearMarkers();
   kakaoMap.relayout();
@@ -572,7 +668,7 @@ function renderMarkers() {
   const located = locatedHospitals.value;
   if (located.length === 0) {
     visibleMapHospitals.value = [];
-    focusMapForEmptyResults();
+    if (!preserveViewport) focusMapForEmptyResults();
     showEmptyMapGuide();
     return;
   }
@@ -580,8 +676,10 @@ function renderMarkers() {
   mapMessage.value = "";
   const bounds = new window.kakao.maps.LatLngBounds();
   located.forEach((hospital) => createHospitalMarker(hospital, bounds));
-  const mapFitMode = fitHospitalMapBounds(located, bounds);
-  if (mapFitMode !== "region") focusSelectedHospitalOnMap();
+  if (!preserveViewport) {
+    const mapFitMode = fitHospitalMapBounds(located, bounds);
+    if (mapFitMode !== "region") focusSelectedHospitalOnMap();
+  }
   window.setTimeout(updateVisibleMapHospitals, 120);
 }
 
@@ -768,7 +866,7 @@ async function locate() {
 function syncQueryToUrl() {
   const query = {};
   if (filter.keyword) query.keyword = filter.keyword;
-  if (filter.status && filter.status !== "open") query.status = filter.status;
+  if (filter.status) query.status = filter.status;
   if (filter.sido) query.sido = filter.sido;
   if (filter.sigungu) query.sigungu = filter.sigungu;
   if (filter.phoneOnly) query.phone = "1";
@@ -820,8 +918,15 @@ async function loadRegions() {
 }
 
 function selectStatus(status) {
-  filter.status = status;
+  filter.status = filter.status === status ? "" : status;
   load();
+}
+
+async function toggleMapStatus(status) {
+  preserveNextViewportRender = true;
+  filter.status = filter.status === status ? "" : status;
+  selected.value = null;
+  syncQueryToUrl();
 }
 
 function clearSigunguAndLoad() {
@@ -880,7 +985,18 @@ watch(selected, (hospital) => {
   if (hospital) focusHospital(hospital, false);
 });
 
+watch(displayHospitals, async () => {
+  visibleMapHospitals.value = locatedHospitals.value;
+  await nextTick();
+  renderMarkers({ preserveViewport: preserveNextViewportRender });
+  preserveNextViewportRender = false;
+});
+
 onMounted(async () => {
+  currentTimeTimer = window.setInterval(() => {
+    currentTime.value = new Date();
+  }, 60000);
+
   const q = route.query;
   if (q.keyword) filter.keyword = String(q.keyword);
   if (q.status) filter.status = String(q.status);
@@ -923,6 +1039,10 @@ onMounted(async () => {
     requestCurrentLocation({ syncFilter: false, reload: false, pan: false, notify: false });
   }
 });
+
+onUnmounted(() => {
+  if (currentTimeTimer) window.clearInterval(currentTimeTimer);
+});
 </script>
 
 <template>
@@ -938,7 +1058,7 @@ onMounted(async () => {
     <section class="hospital-control-panel">
       <form class="hospital-filter-board" novalidate @submit.prevent="searchHospitals">
         <div class="filter-row">
-          <span class="filter-label">영업</span>
+          <span class="filter-label">진료</span>
           <div class="hospital-status-tabs" role="tablist" aria-label="영업 필터">
             <button
               v-for="option in statusOptions"
@@ -1054,12 +1174,24 @@ onMounted(async () => {
           >
             <span aria-hidden="true">⌖</span>현위치
           </button>
-          <span class="map-status-chip open">
-            <span aria-hidden="true"></span>영업 중 {{ mapVisibleHospitalCount.toLocaleString() }}
-          </span>
-          <span class="map-status-chip urgent">
+          <button
+            type="button"
+            class="map-status-chip open"
+            :class="{ active: filter.status === 'open' }"
+            title="영업 중인 병원만 목록에 보기"
+            @click="toggleMapStatus('open')"
+          >
+            <span aria-hidden="true"></span>영업 중 {{ mapVisibleOpenCount.toLocaleString() }}
+          </button>
+          <button
+            type="button"
+            class="map-status-chip urgent"
+            :class="{ active: filter.status === 'emergency24' }"
+            title="응급 24시 병원만 목록에 보기"
+            @click="toggleMapStatus('emergency24')"
+          >
             <span aria-hidden="true"></span>응급 24시 {{ mapVisibleEmergency24Count.toLocaleString() }}
-          </span>
+          </button>
         </div>
       </div>
 
@@ -1102,11 +1234,15 @@ onMounted(async () => {
             </div>
             <p>{{ h.address }}</p>
             <ul class="hospital-info-list" aria-label="병원 기본 정보">
-              <li class="hospital-info-item">
+              <li class="hospital-info-item status-info">
+                <span class="info-label">운영상태</span>
+                <span class="info-value">{{ operatingStatusDisplay(h) }}</span>
+              </li>
+              <li class="hospital-info-item hours-info">
                 <span class="info-label">영업시간</span>
                 <span class="info-value hospital-hours-preview">{{ openingHoursSummary(h) }}</span>
               </li>
-              <li class="hospital-info-item">
+              <li class="hospital-info-item phone-info">
                 <span class="info-label">전화</span>
                 <span class="info-value phone-line" :class="{ muted: !h.phone }">{{ h.phone || "전화번호 확인 필요" }}</span>
               </li>
@@ -1193,7 +1329,7 @@ onMounted(async () => {
                 >
                   {{ line }}
                 </span>
-                <span class="hospital-hour-status">· {{ detailHospital.operatingStatus }}</span>
+                <span class="hospital-hour-status">· {{ operatingStatusDisplay(detailHospital) }}</span>
               </dd>
             </div>
             <div class="detail-item detail-status">

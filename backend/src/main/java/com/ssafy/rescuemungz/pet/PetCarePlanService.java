@@ -101,7 +101,7 @@ public class PetCarePlanService {
         String category = value == null ? "" : value.trim();
         return switch (category) {
             case "병원 진료", "병원 방문", "병원 예약", "진료" -> "진료";
-            case "예방접종", "접종" -> "접종";
+            case "예방접종", "접종" -> "예방접종";
             case "약 복용", "복약" -> "약 복용";
             case "응급 체크", "관찰 기록" -> "응급 체크";
             case "검진" -> "검진";
@@ -113,9 +113,9 @@ public class PetCarePlanService {
     private String normalizeCategory(String value) {
         return switch (value == null ? "" : value.trim()) {
             case "병원 방문", "병원 예약" -> "진료";
-            case "예방접종" -> "접종";
+            case "예방접종", "접종" -> "예방접종";
             case "관찰 기록" -> "응급 체크";
-            case "응급 체크", "진료", "접종", "약 복용", "검진", "케어 루틴" -> value.trim();
+            case "응급 체크", "진료", "약 복용", "검진", "케어 루틴" -> value.trim();
             case "약복용" -> "약 복용";
             default -> "케어 루틴";
         };
