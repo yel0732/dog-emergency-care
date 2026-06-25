@@ -114,21 +114,23 @@ External APIs
 │  │  └─ views
 │  ├─ package.json
 │  └─ vite.config.js
-├─ src/main/java/com/ssafy/rescuemungz
-│  ├─ auth
-│  ├─ user
-│  ├─ pet
-│  ├─ emergencycheck
-│  ├─ emergencyvideo
-│  ├─ foodsafety
-│  ├─ hospital
-│  ├─ caseboard
-│  └─ videoreview
-├─ src/main/resources
-│  ├─ application.properties
-│  ├─ schema.sql
-│  ├─ data.sql
-│  └─ static
+├─ backend
+│  ├─ pom.xml
+│  ├─ src/main/java/com/ssafy/rescuemungz
+│  │  ├─ auth
+│  │  ├─ user
+│  │  ├─ pet
+│  │  ├─ emergencycheck
+│  │  ├─ emergencyvideo
+│  │  ├─ foodsafety
+│  │  ├─ hospital
+│  │  ├─ caseboard
+│  │  └─ videoreview
+│  └─ src/main/resources
+│     ├─ application.properties
+│     ├─ schema.sql
+│     ├─ data.sql
+│     └─ static
 └─ docs
 ```
 

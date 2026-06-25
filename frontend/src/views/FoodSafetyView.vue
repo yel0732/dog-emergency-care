@@ -425,9 +425,6 @@ onMounted(() => {
           </div>
         </section>
 
-        <footer class="food-detail-modal-actions">
-          <button type="button" class="food-detail-toggle" @click="closeFoodDetails">닫기</button>
-        </footer>
       </section>
     </div>
   </main>

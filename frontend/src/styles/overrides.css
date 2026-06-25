@@ -11628,3 +11628,33 @@ html body .floating-toast.success > span {
   min-width: 0 !important;
   white-space: nowrap !important;
 }
+
+/* Report history table: keep row dividers continuous and header colors consistent. */
+.report-table thead th:first-child {
+  color: #7a8794 !important;
+  font-weight: 850 !important;
+}
+
+.report-table tbody td.report-date-cell {
+  display: table-cell !important;
+}
+
+.report-date-cell span {
+  display: block !important;
+}
+
+/* Food detail references should read as a real list in the modal. */
+.food-detail-modal .food-reference-links.compact {
+  display: block !important;
+  list-style: disc !important;
+  padding-left: 1.25rem !important;
+}
+
+.food-detail-modal .food-reference-links.compact li {
+  display: list-item !important;
+  padding-left: 0.15rem !important;
+}
+
+.food-detail-modal .food-reference-links.compact li::marker {
+  color: var(--green-600) !important;
+}
