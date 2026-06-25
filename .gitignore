@@ -43,6 +43,13 @@ yarn-error.log*
 .env
 env
 
+# Environment files
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+
 ### VS Code ###
 .vscode/
 
