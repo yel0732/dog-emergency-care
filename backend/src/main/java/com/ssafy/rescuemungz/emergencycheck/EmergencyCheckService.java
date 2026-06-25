@@ -7,8 +7,11 @@ import com.ssafy.rescuemungz.common.NotFoundException;
 import com.ssafy.rescuemungz.foodsafety.FoodSafety;
 import com.ssafy.rescuemungz.pet.Pet;
 import com.ssafy.rescuemungz.pet.PetService;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,10 +21,14 @@ import java.util.List;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Optional;
 
 @Service
 public class EmergencyCheckService {
+    private static final String PDF_FONT_FAMILY = "NanumGothic";
+    private static final String PDF_FONT_RESOURCE = "fonts/NanumGothic-Regular.ttf";
+
     private final EmergencyCheckMapper checkMapper;
     private final VetReportMapper reportMapper;
     private final EmergencyCheckEvidenceMapper checkEvidenceMapper;
@@ -32,6 +39,7 @@ public class EmergencyCheckService {
     private final EmergencyRiskResolver riskResolver;
     private final EmergencyGuideFactory guideFactory;
     private final ObjectMapper objectMapper;
+    private volatile Path pdfFontFile;
 
     public EmergencyCheckService(EmergencyCheckMapper checkMapper, VetReportMapper reportMapper,
                                  EmergencyCheckEvidenceMapper checkEvidenceMapper, EmergencyAiClient aiClient,
@@ -152,7 +160,7 @@ public class EmergencyCheckService {
                 <html><head><meta charset="UTF-8"/>
                 <style>
                 @page{margin:18mm 15mm}
-                body{font-family:'Malgun Gothic',Arial,sans-serif;color:#17211f;line-height:1.58;margin:0;padding:0;font-size:13px;font-weight:400}
+                body{font-family:'NanumGothic',Arial,sans-serif;color:#17211f;line-height:1.58;margin:0;padding:0;font-size:13px;font-weight:400}
                 h1,h2{margin:0;color:#17211f;font-weight:600;letter-spacing:0}
                 h1{font-size:23px;line-height:1.25}
                 h2{font-size:15px;line-height:1.35}
@@ -217,7 +225,7 @@ public class EmergencyCheckService {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
             builder.withHtmlContent(html, null);
-            koreanFonts().forEach(font -> builder.useFont(font.toFile(), "Malgun Gothic"));
+            builder.useFont(pdfFontFile().toFile(), PDF_FONT_FAMILY);
             builder.toStream(out);
             builder.run();
             return out.toByteArray();
@@ -919,12 +927,28 @@ public class EmergencyCheckService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private List<Path> koreanFonts() {
-        return List.of(
-                Path.of("C:/Windows/Fonts/malgun.ttf"),
-                Path.of("C:/Windows/Fonts/malgunsl.ttf"),
-                Path.of("C:/Windows/Fonts/malgunbd.ttf")
-        ).stream().filter(Files::exists).limit(1).toList();
+    private Path pdfFontFile() throws IOException {
+        Path cached = pdfFontFile;
+        if (cached != null && Files.exists(cached)) {
+            return cached;
+        }
+        synchronized (this) {
+            cached = pdfFontFile;
+            if (cached != null && Files.exists(cached)) {
+                return cached;
+            }
+            ClassPathResource fontResource = new ClassPathResource(PDF_FONT_RESOURCE);
+            if (!fontResource.exists()) {
+                throw new IOException("PDF font resource not found: " + PDF_FONT_RESOURCE);
+            }
+            Path tempFont = Files.createTempFile("rescue-mungz-pdf-font-", ".ttf");
+            try (InputStream input = fontResource.getInputStream()) {
+                Files.copy(input, tempFont, StandardCopyOption.REPLACE_EXISTING);
+            }
+            tempFont.toFile().deleteOnExit();
+            pdfFontFile = tempFont;
+            return tempFont;
+        }
     }
 
     private String escape(String value) {
