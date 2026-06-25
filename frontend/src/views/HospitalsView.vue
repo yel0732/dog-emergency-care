@@ -58,9 +58,11 @@ let hospitalInfoOverlay = null;
 let toastTimer = null;
 let autoLocationRequested = false;
 let currentTimeTimer = null;
+let preserveNextViewportRender = false;
 
 const displayHospitals = computed(() => {
   if (filter.status === "open") return hospitals.value.filter(isCurrentlyOpenHospital);
+  if (filter.status === "emergency24") return hospitals.value.filter(isEmergency24Hospital);
   return hospitals.value;
 });
 const locatedHospitals = computed(() => displayHospitals.value.filter(hasCoordinate));
@@ -85,7 +87,6 @@ const mapVisibleEmergency24Count = computed(() =>
 );
 const totalHospitalCount = 5439;
 const statusOptions = [
-  { value: "", label: "전체" },
   { value: "open", label: "지금 영업" },
   { value: "normal", label: "일반" },
   { value: "emergency24", label: "응급 24시" },
@@ -309,7 +310,7 @@ function currentOperatingState(hospital, now = currentTime.value) {
   const yesterdayHours = String(yesterdayLine || "").replace(/^[^:：]+[:：]\s*/, "");
 
   if (unknownHoursPattern.test(todayHours)) return { status: "unknown", label: "영업 시간 확인" };
-  if (closedPattern.test(todayHours)) return { status: "closed", label: "영업 종료" };
+  if (closedPattern.test(todayHours)) return { status: "closed", label: "진료 종료" };
 
   const todayRanges = parseHourRanges(todayHours);
   const yesterdayRanges = parseHourRanges(yesterdayHours);
@@ -319,7 +320,7 @@ function currentOperatingState(hospital, now = currentTime.value) {
   ) {
     return { status: "open", label: "영업 중" };
   }
-  if (todayRanges.length > 0 || yesterdayRanges.length > 0) return { status: "closed", label: "영업 종료" };
+  if (todayRanges.length > 0 || yesterdayRanges.length > 0) return { status: "closed", label: "진료 종료" };
   return { status: "unknown", label: "영업 시간 확인" };
 }
 
@@ -658,7 +659,7 @@ function focusSelectedHospitalOnMap() {
   }
 }
 
-function renderMarkers() {
+function renderMarkers({ preserveViewport = false } = {}) {
   if (!kakaoMap || !window.kakao?.maps) return;
   clearMarkers();
   kakaoMap.relayout();
@@ -667,7 +668,7 @@ function renderMarkers() {
   const located = locatedHospitals.value;
   if (located.length === 0) {
     visibleMapHospitals.value = [];
-    focusMapForEmptyResults();
+    if (!preserveViewport) focusMapForEmptyResults();
     showEmptyMapGuide();
     return;
   }
@@ -675,8 +676,10 @@ function renderMarkers() {
   mapMessage.value = "";
   const bounds = new window.kakao.maps.LatLngBounds();
   located.forEach((hospital) => createHospitalMarker(hospital, bounds));
-  const mapFitMode = fitHospitalMapBounds(located, bounds);
-  if (mapFitMode !== "region") focusSelectedHospitalOnMap();
+  if (!preserveViewport) {
+    const mapFitMode = fitHospitalMapBounds(located, bounds);
+    if (mapFitMode !== "region") focusSelectedHospitalOnMap();
+  }
   window.setTimeout(updateVisibleMapHospitals, 120);
 }
 
@@ -915,8 +918,15 @@ async function loadRegions() {
 }
 
 function selectStatus(status) {
-  filter.status = status;
+  filter.status = filter.status === status ? "" : status;
   load();
+}
+
+async function toggleMapStatus(status) {
+  preserveNextViewportRender = true;
+  filter.status = filter.status === status ? "" : status;
+  selected.value = null;
+  syncQueryToUrl();
 }
 
 function clearSigunguAndLoad() {
@@ -978,7 +988,8 @@ watch(selected, (hospital) => {
 watch(displayHospitals, async () => {
   visibleMapHospitals.value = locatedHospitals.value;
   await nextTick();
-  renderMarkers();
+  renderMarkers({ preserveViewport: preserveNextViewportRender });
+  preserveNextViewportRender = false;
 });
 
 onMounted(async () => {
@@ -1047,7 +1058,7 @@ onUnmounted(() => {
     <section class="hospital-control-panel">
       <form class="hospital-filter-board" novalidate @submit.prevent="searchHospitals">
         <div class="filter-row">
-          <span class="filter-label">영업</span>
+          <span class="filter-label">진료</span>
           <div class="hospital-status-tabs" role="tablist" aria-label="영업 필터">
             <button
               v-for="option in statusOptions"
@@ -1168,7 +1179,7 @@ onUnmounted(() => {
             class="map-status-chip open"
             :class="{ active: filter.status === 'open' }"
             title="영업 중인 병원만 목록에 보기"
-            @click="selectStatus('open')"
+            @click="toggleMapStatus('open')"
           >
             <span aria-hidden="true"></span>영업 중 {{ mapVisibleOpenCount.toLocaleString() }}
           </button>
@@ -1177,7 +1188,7 @@ onUnmounted(() => {
             class="map-status-chip urgent"
             :class="{ active: filter.status === 'emergency24' }"
             title="응급 24시 병원만 목록에 보기"
-            @click="selectStatus('emergency24')"
+            @click="toggleMapStatus('emergency24')"
           >
             <span aria-hidden="true"></span>응급 24시 {{ mapVisibleEmergency24Count.toLocaleString() }}
           </button>
